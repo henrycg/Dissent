@@ -106,8 +106,10 @@ namespace Tests {
     qDebug() << "=====";
     QByteArray out;
     QByteArray msg(rand->GetInt(1, group->BytesPerElement()), 0);
+    QByteArray long_msg(rand->GetInt(1, 1 << 20), 0);
     for(int i=0; i<100; i++) {
       rand->GenerateBlock(msg);
+      rand->GenerateBlock(long_msg);
 
       Element a = group->EncodeBytes(msg);
       
@@ -131,6 +133,17 @@ namespace Tests {
 
       EXPECT_EQ(msg, out);
       qDebug() << out;
+
+      Element h1 = group->HashIntoElement(long_msg);
+      EXPECT_TRUE(group->IsElement(h1));
+      EXPECT_FALSE(group->IsIdentity(h1));
+
+      // Flip bits in long_msg
+      long_msg[long_msg.count()-1] = ~long_msg[long_msg.count()-1];
+      Element h2 = group->HashIntoElement(long_msg);
+      EXPECT_TRUE(group->IsElement(h1));
+      EXPECT_FALSE(group->IsIdentity(h1));
+      EXPECT_FALSE(h1 == h2);
     }
   }
 

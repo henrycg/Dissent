@@ -154,6 +154,13 @@ namespace AbstractGroup {
       virtual bool DecodeBytes(const Element &a, QByteArray &out) const = 0;
 
       /**
+       * Deterministically compute a group element by hashing into
+       * the set of group elements.
+       * @param to_hash the string with which to compute the hash
+       */
+      virtual Element HashIntoElement(const QByteArray &to_hash) const;
+
+      /**
        * Check if the group is probably valid. It's hard to
        * check in general, so this is just a "best effort" test.
        */

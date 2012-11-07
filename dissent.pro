@@ -322,6 +322,7 @@ SOURCES += ext/joyent-http-parser/http_parser.c \
            src/Crypto/NullPrivateKey.cpp \
            src/Crypto/OnionEncryptor.cpp \
            src/Crypto/ThreadedOnionEncryptor.cpp \
+           src/Crypto/AbstractGroup/AbstractGroup.cpp \
            src/Crypto/AbstractGroup/BotanECGroup.cpp \
            src/Crypto/AbstractGroup/ByteGroup.cpp \
            src/Crypto/AbstractGroup/IntegerGroup.cpp \
