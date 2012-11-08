@@ -91,6 +91,7 @@ namespace Web {
     HttpResponse response;
 
     QSharedPointer<WebRequest> wr(new WebRequest(socket));
+
     QByteArray request_data(wr->GetSocket()->readAll());
 
     if(wr->GetRequest().ParseRequest(request_data)) {

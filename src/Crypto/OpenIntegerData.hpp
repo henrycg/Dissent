@@ -138,6 +138,14 @@ namespace Crypto {
       }
 
       /**
+       * Return true if integer is prime
+       */
+      virtual bool IsPrime() const 
+      {
+        return BN_is_prime(_bignum, BN_prime_checks, NULL, _ctx, NULL);
+      }
+
+      /**
        * Add operator, produces a new Integer
        * @param other the Integer to add
        */

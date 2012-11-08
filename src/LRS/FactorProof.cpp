@@ -1,7 +1,15 @@
 
-#include "FactorProof.hpp"
+#include <cryptopp/osrng.h>
+#include <cryptopp/rsa.h>
+
+#include "Crypto/AbstractGroup/CompositeIntegerGroup.hpp"
+#include "Crypto/CppIntegerData.hpp"
 #include "Crypto/CryptoFactory.hpp"
 
+#include "FactorProof.hpp"
+
+using Dissent::Crypto::AbstractGroup::CompositeIntegerGroup;
+using Dissent::Crypto::CppIntegerData;
 using Dissent::Crypto::Hash;
 using Dissent::Crypto::CryptoFactory;
 using Dissent::Utils::Random;
@@ -9,49 +17,105 @@ using Dissent::Utils::Random;
 namespace Dissent {
 namespace LRS {
 
-  FactorProof::FactorProof() :
+  FactorProof::FactorProof(int n_bits, QByteArray context) :
     SigmaProof(ProofType_FactorProof),
-    _witness(Integer::GetRandomInteger(DefaultModulusBits/2, true)),
-    _witness_image(_witness * Integer::GetRandomInteger(DefaultModulusBits/2, true))
+    _context(context)
   {
+    CryptoPP::AutoSeededX917RNG<CryptoPP::AES> rng;
+    CryptoPP::InvertibleRSAFunction rsa;
+
+    // RSA encryption exponent is 3
+    rsa.Initialize(rng, n_bits, RsaEncryptionExponent);
+
+    Integer n(new CppIntegerData(rsa.GetModulus()));
+    _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(n));
+
+    Hash *hash = CryptoFactory::GetInstance().GetLibrary()->GetHashAlgorithm();
+    QByteArray digest = hash->ComputeHash(context);
+
+    // h is in range [0,n)
+    Integer exponent = Integer(digest) % n;
+    // g^h mod P
+    _witness_image = _group->Exponentiate(_group->GetGenerator(), exponent);
+
+    CryptoPP::Integer wit_img(Integer(
+          _group->ElementToByteArray(_witness_image)).GetByteArray().constData());
+    CryptoPP::Integer root = rsa.ApplyFunction(wit_img);
+
+    // witness (m) is h^{1/e} mod n
+    _witness = Integer(new CppIntegerData(root));
+
+    // tag = g^m
+    _linkage_tag = _group->Exponentiate(_group->GetGenerator(), _witness);
+    _g1 = _linkage_tag;
+    _g2 = _group->Exponentiate(_g1, _witness);
+    _g3 = _witness_image;
   }
 
-  FactorProof::FactorProof(QByteArray witness, 
+  FactorProof::FactorProof(QByteArray context,
+          QByteArray witness, 
           QByteArray witness_image) :
     SigmaProof(ProofType_FactorProof),
-    _witness(witness),
-    _witness_image(witness_image)
-  {}
+    _context(context),
+    _witness(witness)
+  {
+    QDataStream stream(witness_image);
+    QByteArray n_bytes, wi_bytes;
+    stream >> n_bytes >> wi_bytes;
 
-  FactorProof::FactorProof(QByteArray witness_image,
+    _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(Integer(n_bytes)));
+    _witness_image = _group->ElementFromByteArray(wi_bytes);
+    _linkage_tag = _group->Exponentiate(_group->GetGenerator(), _witness);
+
+    _g1 = _linkage_tag;
+    _g2 = _group->Exponentiate(_g1, _witness);
+    _g3 = _witness_image;
+  }
+
+  FactorProof::FactorProof(QByteArray context,
+      QByteArray witness_image,
+      QByteArray linkage_tag, 
       QByteArray commit, 
       QByteArray challenge, 
       QByteArray response) :
     SigmaProof(ProofType_FactorProof),
-    _witness_image(witness_image),
+    _context(context),
     _challenge(challenge),
     _response(response)
   {
-    QDataStream stream(commit);
-    stream >> _commit;
+    QDataStream w_stream(witness_image);
+    QByteArray n_bytes, wi_bytes;
+    w_stream >> n_bytes >> wi_bytes;
+
+    _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(Integer(n_bytes)));
+    _witness_image = _group->ElementFromByteArray(wi_bytes);
+    _linkage_tag = _group->ElementFromByteArray(linkage_tag);
+
+    QByteArray c1_bytes, c2_bytes;
+    QDataStream c_stream(commit);
+    c_stream >> c1_bytes >> c2_bytes;
+
+    _commit_1 = _group->ElementFromByteArray(c1_bytes);
+    _commit_2 = _group->ElementFromByteArray(c2_bytes);
+
+    _g1 = _linkage_tag;
+    _g2 = _group->RandomElement();
+    _g3 = _witness_image;
   }
 
   FactorProof::~FactorProof() {};
 
   void FactorProof::GenerateCommit()
   {
-    // pick random exponent r in [0, 2^{log{n}-1})
-    _commit_secret = Integer::GetRandomInteger(0, DefaultModulusBits-2, false);
+    // pick random exponent r in [0, n)
+    _commit_secret = _group->RandomExponent();
 
-    // pick K random z_i values and
-    // compute x_i = z_i^r mod n
-    QList<Integer> pubs = GetPublicIntegers();
-    _commit.clear();
-    for(int i=0; i<pubs.count(); i++) {
-      _commit.append(pubs[i].Pow(_commit_secret, _witness_image));
-      //qDebug() << "commit[" << i << "]" << _commit[i].GetByteArray().toHex();
-    }
-  };
+    // t1 = (g1)^r
+    Element commit_1 = _group->Exponentiate(_g1, _commit_secret);
+
+    // t2 = (g2)^r 
+    Element commit_2 = _group->Exponentiate(_g2, _commit_secret);
+  }
 
   void FactorProof::GenerateChallenge()
   {
@@ -60,11 +124,11 @@ namespace LRS {
 
   void FactorProof::Prove(QByteArray challenge)
   {
-    if(Integer(challenge) >= BiggestChallenge()) {
+    if(Integer(challenge) >= _group->GetOrder()) {
       qFatal("Challenge too big");
     } 
 
-    const Integer e = Integer::GetRandomInteger(0, BiggestChallenge(), false);
+    const Integer e = _group->RandomExponent();
     const QByteArray e_bytes = e.GetByteArray();
 
     // Replace the rightmost bytes of e with the challenge
@@ -75,44 +139,29 @@ namespace LRS {
 
   void FactorProof::Prove()
   {
+    /*
     const Integer n = _witness_image;
     const Integer p = _witness;
     const Integer q = n / p; // n = p*q
     const Integer phi_n = (p - 1) * (q - 1);
+    */
 
-    // response = commit_secret + ((n - phi(n)) * challenge)
-    _response = (_commit_secret + ((n - phi_n) * _challenge));
+    // r = s - cx
+    _response = (_commit_secret - (_challenge * _witness)) % _group->GetOrder();
   }
 
   void FactorProof::FakeProve()
   {
-    Hash *hash = CryptoFactory::GetInstance().GetLibrary()->GetHashAlgorithm();
-    Random *rnd = CryptoFactory::GetInstance().GetLibrary()->GetRandomNumberGenerator();
+    // c = random
+    _challenge = _group->RandomExponent();
+    // r = random
+    _response = _group->RandomExponent();
 
-    QByteArray bytes(hash->GetDigestSize(), '\0');
-    rnd->GenerateBlock(bytes); 
+    // t1 = (g1^r)*(y1)^c == (g^r)*(tag^c)
+    _commit_1 = _group->CascadeExponentiate(_g1, _response, _g2, _challenge);
 
-    // pick c, r at random
-    _challenge = Integer::GetRandomInteger(0, BiggestChallenge(), false);
-    _response = Integer::GetRandomInteger(0, DefaultModulusBits-2, false);
-
-    const QList<Integer> pubs = GetPublicIntegers();
-    _commit.clear();
-
-    // exp = y - n*chal
-    Integer exponent = _response - (_witness_image * _challenge);
-
-    for(int i=0; i<ParallelRounds; i++) {
-      Integer result;
-
-      if(exponent >= 0) {
-        result = pubs[i].Pow(exponent, _witness_image);
-      } else {
-        result = pubs[i].Pow(Integer(-1)* exponent, _witness_image).ModInverse(_witness_image);
-      }
-
-      _commit.append(result);
-    }
+    // t2 = (g2^r)*(y2)^c == (g^m)^r * (tag)^{mc}
+    _commit_2 = _group->CascadeExponentiate(_g2, _response, _g3, _challenge);
 
     // When we're fake proving, we have no commit secret and no witness
     _commit_secret = 0;
@@ -121,38 +170,20 @@ namespace LRS {
 
   bool FactorProof::Verify(bool verify_challenge) const 
   {
-    // response must be less than 2^{(log n) - 1}
-    if(!(Integer(0) <= _response && _response < Integer(2).Pow(DefaultModulusBits-1, _witness_image))) {
-      qDebug() << "Response is outside of valid range"; 
+    // check_1 = (g1^r)*(g2)^c
+    Element check_1 = _group->CascadeExponentiate(_g1, _response, _g2, _challenge);
+
+    // check_2 = (g2^r)*(g3)^c
+    Element check_2 = _group->CascadeExponentiate(_g2, _response, _g3, _challenge);
+
+    if(check_1 != _commit_1) {
+      qDebug() << "Commit 1 failed";
       return false;
     }
 
-    // get public x_i values
-    const QList<Integer> pubs = GetPublicIntegers();
-
-    if(_commit.count() != pubs.count()) {
-      qDebug() << "Commit and pubs have different lengths"; 
+    if(check_2 != _commit_2) {
+      qDebug() << "Commit 2 failed";
       return false;
-    }
-
-    const Integer exponent = _response - (_witness_image * _challenge);
-    
-    for(int i=0; i<pubs.count(); i++) {
-      // x_i == z_i^{y - ne} mod n
-      Integer result;
-      if(exponent >= 0) {
-        result = pubs[i].Pow(exponent, _witness_image);
-      } else {
-        // if exp < 0, return (commit^-e)^{-1} since crypto++
-        // barfs on negative exponents
-        result = pubs[i].Pow(Integer(-1) * exponent, _witness_image).ModInverse(_witness_image);
-      }
-
-      if(result != _commit[i]) {
-        qWarning() << "Mismatched commit value caused failed proof";
-        //qDebug() << result.GetByteArray().toHex() << pubs[i].GetByteArray().toHex();
-        return false;
-      }
     }
 
     // if verify_challenge is set, make sure that challenge is
@@ -161,7 +192,6 @@ namespace LRS {
       qDebug() << "Challenge does not match commit hash"; 
       return false;
     }
-
     return true;
   };
 
@@ -171,42 +201,24 @@ namespace LRS {
     hash->Restart();
 
     // Hash group definition 
-    hash->Update(_witness_image.GetByteArray());
-    for(int i=0; i<_commit.count(); i++) {
-      hash->Update(_commit[i].GetByteArray());
-    }
+    hash->Update(_group->ElementToByteArray(_witness_image));
+    hash->Update(_group->ElementToByteArray(_linkage_tag));
+    hash->Update(_group->ElementToByteArray(_g1));
+    hash->Update(_group->ElementToByteArray(_g2));
+    hash->Update(_group->ElementToByteArray(_g3));
+    hash->Update(_group->ElementToByteArray(_commit_1));
+    hash->Update(_group->ElementToByteArray(_commit_2));
 
-    // Value of hash mod 2^80
-    return Integer(hash->ComputeHash()) % BiggestChallenge();
-  }
-
-  Integer FactorProof::BiggestChallenge() const 
-  {
-    return Integer(2).Pow(SoundnessParameter, _witness_image);
-  }
-
-  QList<Integer> FactorProof::GetPublicIntegers() const
-  {
-    QList<Integer> out;
-    Random *rnd = CryptoFactory::GetInstance().GetLibrary()->
-      GetRandomNumberGenerator(_witness_image.GetByteArray());
-
-    for(int i=0; i<ParallelRounds; i++) {
-      QByteArray block((_witness_image.GetByteCount()-1), '\0');
-      rnd->GenerateBlock(block);
-      out.append(Integer(block));
-
-      //qDebug() << "pub["<<i<<"]"<<out[i].GetByteArray().toHex();
-    }
-
-    return out;
+    // Value of hash mod group order
+    return Integer(hash->ComputeHash()) % _group->GetOrder();
   }
 
   QByteArray FactorProof::GetCommit() const
   {
     QByteArray out;
     QDataStream stream(&out, QIODevice::WriteOnly);
-    stream << _commit;
+    stream << _group->ElementToByteArray(_commit_1);
+    stream << _group->ElementToByteArray(_commit_2);
     return out;
   }
 }

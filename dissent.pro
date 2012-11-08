@@ -121,6 +121,7 @@ HEADERS += ext/joyent-http-parser/http_parser.h \
            src/Crypto/AbstractGroup/BotanECGroup.hpp \
            src/Crypto/AbstractGroup/ByteElementData.hpp \
            src/Crypto/AbstractGroup/ByteGroup.hpp \
+           src/Crypto/AbstractGroup/CompositeIntegerGroup.hpp \
            src/Crypto/AbstractGroup/CppECElementData.hpp \
            src/Crypto/AbstractGroup/CppECGroup.hpp \
            src/Crypto/AbstractGroup/ECParams.hpp \
@@ -325,6 +326,7 @@ SOURCES += ext/joyent-http-parser/http_parser.c \
            src/Crypto/AbstractGroup/AbstractGroup.cpp \
            src/Crypto/AbstractGroup/BotanECGroup.cpp \
            src/Crypto/AbstractGroup/ByteGroup.cpp \
+           src/Crypto/AbstractGroup/CompositeIntegerGroup.cpp \
            src/Crypto/AbstractGroup/IntegerGroup.cpp \
            src/Crypto/AbstractGroup/CppECGroup.cpp \
            src/Crypto/AbstractGroup/ECParams.cpp \

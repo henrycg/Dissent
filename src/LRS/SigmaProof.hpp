@@ -86,6 +86,12 @@ namespace LRS {
       virtual QByteArray GetWitnessImage() const = 0;
 
       /**
+       * Get the linkage tag associated with this witness.
+       * For example, if we're using discrete log, return h^x
+       */
+      virtual QByteArray GetLinkageTag() const = 0;
+
+      /**
        * Get a serialized representation of the commit
        * for this Sigma proof
        */

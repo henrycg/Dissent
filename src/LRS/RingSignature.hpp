@@ -18,7 +18,9 @@ namespace LRS {
       /**
        * Constructor
        */
-      RingSignature(QList<QSharedPointer<SigmaProof> > proofs, int real_idx);
+      RingSignature(QByteArray context,
+          QList<QSharedPointer<SigmaProof> > proofs, 
+          int real_idx);
 
       /**
        * Destructor
@@ -34,11 +36,14 @@ namespace LRS {
       QByteArray CreateChallenge(const QByteArray &msg, const QList<QByteArray> &commits) const;
       QByteArray Xor(const QByteArray &a, const QByteArray &b) const;
 
+      QByteArray _context;
+
       QList<QSharedPointer<SigmaProof> > _proofs;
       QList<SigmaProof::ProofType> _proof_types;
       int _real_idx;
 
       QList<QByteArray> _witness_images;
+      QList<QByteArray> _linkage_tags;
   };
 
 }

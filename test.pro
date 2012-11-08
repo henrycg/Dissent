@@ -61,6 +61,7 @@ SOURCES += ext/googletest/src/gtest-all.cc \
            src/Tests/BotanECGroupTest.cpp \
            src/Tests/BulkRoundTest.cpp \
            src/Tests/ByteGroupTest.cpp \
+           src/Tests/CompositeIntegerGroupTest.cpp \
            src/Tests/ConnectionTest.cpp \
            src/Tests/CppECGroupTest.cpp \
            src/Tests/Crypto.cpp \

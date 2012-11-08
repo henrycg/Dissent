@@ -20,12 +20,15 @@ namespace LRS {
       /**
        * Constructor
        */
-      SchnorrProof();
+      SchnorrProof(QByteArray context);
 
-      SchnorrProof(QByteArray witness, 
+      SchnorrProof(QByteArray context,
+          QByteArray witness, 
           QByteArray witness_image);
 
-      SchnorrProof(QByteArray witness_image,
+      SchnorrProof(QByteArray context,
+          QByteArray witness_image,
+          QByteArray linkage_tag, 
           QByteArray commit, 
           QByteArray challenge, 
           QByteArray response);
@@ -88,10 +91,16 @@ namespace LRS {
       virtual QByteArray GetWitnessImage() const { return _group->ElementToByteArray(_witness_image); }
 
       /**
+       * Get the linkage tag associated with this witness.
+       * For example, if we're using discrete log, return h^x
+       */
+      virtual QByteArray GetLinkageTag() const { return _group->ElementToByteArray(_linkage_tag); }
+
+      /**
        * Get a serialized representation of the commit
        * for this Sigma proof
        */
-      virtual QByteArray GetCommit() const { return _group->ElementToByteArray(_commit); }
+      virtual QByteArray GetCommit() const; 
 
       /**
        * Get the challenge integer for this proof
@@ -110,10 +119,18 @@ namespace LRS {
 
       QSharedPointer<AbstractGroup> _group;
 
+      QByteArray _context;
+
       Integer _witness;
       Element _witness_image;
-      Element _commit;
+
+      Element _tag_generator;
+      Element _linkage_tag;
+
+      Element _commit_1;
+      Element _commit_2;
       Integer _commit_secret;
+
       Integer _challenge;
       Integer _response;
 

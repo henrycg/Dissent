@@ -61,6 +61,11 @@ namespace Crypto {
       }
 
       /**
+       * Returns true if number is prime
+       */
+      virtual bool IsPrime() const = 0;
+
+      /**
        * Add operator, produces a new Integer
        * @param other the Integer to add
        */

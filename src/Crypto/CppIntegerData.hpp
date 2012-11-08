@@ -9,6 +9,7 @@
 #include <cryptopp/ccm.h>
 #include <cryptopp/des.h>
 #include <cryptopp/modarith.h>
+#include <cryptopp/nbtheory.h>
 #include <cryptopp/osrng.h> 
 
 #include "AsymmetricKey.hpp"
@@ -104,6 +105,14 @@ namespace Crypto {
        * Return the underlying Cpp integer object
        */
       inline const CryptoPP::Integer GetCryptoInteger() const { return _integer; }
+
+      /**
+       * Return true if number is greater than zero and is
+       * prime
+       */
+      inline bool IsPrime() const { 
+        return (_integer > 0) && CryptoPP::IsPrime(_integer); 
+      }
 
       /**
        * Add operator, produces a new Integer

@@ -1,46 +1,39 @@
 #ifndef DISSENT_LRS_FACTOR_PROOF_H_GUARD
 #define DISSENT_LRS_FACTOR_PROOF_H_GUARD
 
+#include "Crypto/AbstractGroup/AbstractGroup.hpp"
+#include "Crypto/AbstractGroup/Element.hpp"
+
 #include "SigmaProof.hpp"
 
 namespace Dissent {
 namespace LRS {
 
   /**
-   * Protocol derived from:
-   *   "Short Proofs of Knowledge for Factoring"
-   *   Guillaume Poupard and Jacques Stern (PKC 2000)
-   *   http://www.di.ens.fr/~stern/data/St84.pdf
+   * Proof of knowledge derived from:
+   * Camenisch and Stadler - CRYPTO 1997
    */
   class FactorProof : public SigmaProof {
 
     public:
 
-      /**
-       * The prover can cheat with probability 2^{-parameter}
-       */
-      static const int SoundnessParameter = 96;
+      static const int RsaEncryptionExponent = 3;
 
-      /**
-       * For now, we only can prove factorization of integers
-       * of this number of bits
-       */
-      static const int DefaultModulusBits = 2048;
-
-      /**
-       * This is the constant K in the paper
-       */
-      static const int ParallelRounds = 16;
+      typedef Dissent::Crypto::AbstractGroup::Element Element;
+      typedef Dissent::Crypto::AbstractGroup::AbstractGroup AbstractGroup;
 
       /**
        * Constructor
        */
-      FactorProof();
+      FactorProof(int n_bits, QByteArray context);
 
-      FactorProof(QByteArray witness, 
+      FactorProof(QByteArray context, 
+          QByteArray witness, 
           QByteArray witness_image);
 
-      FactorProof(QByteArray witness_image,
+      FactorProof(QByteArray context,
+          QByteArray witness_image,
+          QByteArray linkage_tag,
           QByteArray commit, 
           QByteArray challenge, 
           QByteArray response);
@@ -100,7 +93,13 @@ namespace LRS {
        * For example, if this is a proof of knowledge of discrete
        * log, return g^x
        */
-      virtual QByteArray GetWitnessImage() const { return _witness_image.GetByteArray(); }
+      virtual QByteArray GetWitnessImage() const { return _group->ElementToByteArray(_witness_image); }
+
+      /**
+       * Get the linkage tag associated with this witness.
+       * For example, if we're using discrete log, return h^x
+       */
+      inline virtual QByteArray GetLinkageTag() const { return QByteArray(); }
 
       /**
        * Get a serialized representation of the commit
@@ -122,18 +121,27 @@ namespace LRS {
     private:
 
       Integer CommitHash() const;
-      QList<Integer> GetPublicIntegers() const;
-      Integer BiggestChallenge() const;
 
-      Integer _witness; // witness == the factor p (or q) of n
-      Integer _witness_image; // witness_image == n = p*q
+      QSharedPointer<AbstractGroup> _group;
 
-      QList<Integer> _commit;
+      QByteArray _context;
+
+      Integer _witness; // witness == the eth root of h = Hash(stuff)
+      Element _witness_image; // witness_image == g^h
+
+      Element _tag_generator;
+      Element _linkage_tag;
+
+      Element _commit_1;
+      Element _commit_2;
       Integer _commit_secret;
 
       Integer _challenge;
-
       Integer _response;
+
+      Element _g1; // g^m
+      Element _g2; // g^mm or random (for fake proof)
+      Element _g3; // g^mmm
   };
 
 }

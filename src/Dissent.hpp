@@ -86,6 +86,7 @@
 #include "Crypto/AbstractGroup/BotanECElementData.hpp"
 #include "Crypto/AbstractGroup/BotanECGroup.hpp"
 #include "Crypto/AbstractGroup/ByteElementData.hpp"
+#include "Crypto/AbstractGroup/CompositeIntegerGroup.hpp"
 #include "Crypto/AbstractGroup/CppECElementData.hpp"
 #include "Crypto/AbstractGroup/CppECGroup.hpp"
 #include "Crypto/AbstractGroup/ECParams.hpp"

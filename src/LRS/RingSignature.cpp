@@ -11,8 +11,10 @@ using Dissent::Crypto::CryptoFactory;
 namespace Dissent {
 namespace LRS {
 
-  RingSignature::RingSignature(QList<QSharedPointer<SigmaProof> > proofs, 
+  RingSignature::RingSignature(QByteArray context,
+      QList<QSharedPointer<SigmaProof> > proofs, 
       int real_idx) :
+    _context(context),
     _proofs(proofs),
     _real_idx(real_idx)
   {
@@ -40,6 +42,7 @@ namespace LRS {
 
     for(int i=0; i<count; i++) {
       _witness_images.append(_proofs[i]->GetWitnessImage());
+      _linkage_tags.append(_proofs[i]->GetLinkageTag());
       _proof_types.append(_proofs[i]->GetProofType());
     }
 
@@ -129,14 +132,18 @@ namespace LRS {
       switch(_proof_types[i]) {
 
         case SigmaProof::ProofType_FactorProof:
-          p = QSharedPointer<SigmaProof>(new FactorProof(_witness_images[i],
+          p = QSharedPointer<SigmaProof>(new FactorProof(_context,
+                _witness_images[i],
+                _linkage_tags[i],
                 commits[i], 
                 challenges[i], 
                 responses[i]));
           break;
 
         case SigmaProof::ProofType_SchnorrProof:
-          p = QSharedPointer<SigmaProof>(new SchnorrProof(_witness_images[i],
+          p = QSharedPointer<SigmaProof>(new SchnorrProof(_context,
+                _witness_images[i],
+                _linkage_tags[i],
                 commits[i], 
                 challenges[i], 
                 responses[i]));

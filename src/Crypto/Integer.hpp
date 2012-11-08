@@ -106,6 +106,14 @@ namespace Crypto {
       }
 
       /**
+       * Returns true if integer is greater than zero and is prime
+       */
+      inline bool IsPrime() const 
+      {
+        return _data->IsPrime();
+      }
+
+      /**
        * Add operator, produces a new Integer
        * @param other the Integer to add
        */
