@@ -13,7 +13,7 @@ namespace Tests {
     QByteArray context = "abcd";
     SchnorrProof proto(context);
 
-    for(int i=0; i<500; i++) {
+    for(int i=0; i<10; i++) {
       proto.GenerateCommit();
       proto.GenerateChallenge();
       proto.Prove();
@@ -31,7 +31,7 @@ namespace Tests {
     QByteArray context = "abcd";
     SchnorrProof proto(context);
 
-    for(int i=0; i<500; i++) {
+    for(int i=0; i<10; i++) {
       proto.SetWitness(0); 
 
       proto.FakeProve();
@@ -76,9 +76,9 @@ namespace Tests {
 
   TEST(LRSProofTest, FactorProve)
   {
-    const int n_bits = 2048;
+    const int n_bits = 512;
     FactorProof proof(n_bits, "abcd");
-    for(int i=0; i<20; i++) {
+    for(int i=0; i<2; i++) {
       proof.GenerateCommit();
       proof.GenerateChallenge();
 
@@ -92,7 +92,7 @@ namespace Tests {
 
   TEST(LRSProofTest, FactorProveFake)
   {
-    const int n_bits = 2048;
+    const int n_bits = 512;
     FactorProof proto(n_bits, "abcd");
 
     for(int i=0; i<20; i++) {
@@ -108,7 +108,7 @@ namespace Tests {
     Library *lib = CryptoFactory::GetInstance().GetLibrary();
     QScopedPointer<Dissent::Utils::Random> rand(lib->GetRandomNumberGenerator());
 
-    const int n_bits = 2048;
+    const int n_bits = 512;
 
     for(int repeat=0; repeat<5; repeat++) {
       int count = Random::GetInstance().GetInt(TEST_RANGE_MIN, TEST_RANGE_MAX);

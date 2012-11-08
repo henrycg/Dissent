@@ -66,8 +66,9 @@ namespace Tests {
 
   // Generate a few moduli at random
   INSTANTIATE_TEST_CASE_P(CompositeIntegerGroupTest, CompositeIntegerGroupTest,
-      ::testing::Values(15, 21, 
+      ::testing::Values(
         Integer::GetRandomInteger(128, true)*Integer::GetRandomInteger(128, true),
+        Integer::GetRandomInteger(256, true)*Integer::GetRandomInteger(256, true),
         Integer::GetRandomInteger(512, true)*Integer::GetRandomInteger(512, true)));
 
 }

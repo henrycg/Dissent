@@ -120,6 +120,7 @@ namespace LRS {
 
     private:
 
+      void PrintDebug() const;
       Integer CommitHash() const;
 
       QSharedPointer<AbstractGroup> _group;

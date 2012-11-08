@@ -1,6 +1,3 @@
-#include <cryptopp/integer.h>
-#include <cryptopp/rng.h>
-
 #include "Crypto/CppIntegerData.hpp"
 #include "Crypto/CryptoFactory.hpp"
 
@@ -22,33 +19,29 @@ namespace AbstractGroup {
       Hash *hash = CryptoFactory::GetInstance().GetLibrary()->GetHashAlgorithm();
       QByteArray seed = hash->ComputeHash(n.GetByteArray());
 
-      // This does not need to be a secure RNG
-      CryptoPP::word32 w;
-      for(int i=0; i<4; i++) {
-        CryptoPP::word32 b = seed[i];
-        b <<= (8*i);
-        w |= b;
-      }
-
-      CryptoPP::LC_RNG rng(w);
-
-      do {
-        CryptoPP::Integer s(rng, CryptoPP::Integer(2), 
-            CryptoPP::Integer::Power2(16), CryptoPP::Integer::PRIME);
-        _s = Integer(new CppIntegerData(s));
+      for(_s=3; ; _s = _s+1) {
+        if(!_s.IsPrime()) continue;
         _p = (2 * _s * _n) + 1;
         qDebug() << "s" << _s.GetByteArray().toHex();
         qDebug() << "n" << _n.GetByteArray().toHex();
         qDebug() << "p" << _p.GetByteArray().toHex();
-      } while(!_p.IsPrime()); 
+        if(_p.IsPrime()) break;
+      }
 
       // Set g to some random element
 
+      Integer g;
       for(Integer i=0; ; i = i+1) {
-        _g = (Integer(seed) + i) % _p;
-        if(IsGenerator(_g)) break;
+        g = (Integer(seed) + i) % _p;
+
+        // Make sure that g generates a subgroup that is bigger
+        // than order 2 and s and smaller than order P. 
+        // Since we do not know the factorization of n=qr, 
+        // we might be generating a subgroup of order q or r. 
+        if(g.Pow(2, _p) != 1 && g.Pow(_s, _p) != 1 && g.Pow(_n, _p) == 1) break;
       }
 
+      _g = Element(new IntegerElementData(g));
     };
 
   QSharedPointer<AbstractGroup> CompositeIntegerGroup::Copy() const
@@ -150,22 +143,13 @@ namespace AbstractGroup {
     return true;
   }
 
-  bool CompositeIntegerGroup::IsGenerator(const Integer &a) const
-  {
-    // g should have order n and not order 2 or s
-    if(a.Pow(2, _p) == 1) return false;
-    if(a.Pow(_s, _p) == 1) return false;
-    if(a.Pow(_n, _p) != 1) {
-      qDebug() << "Generator does not have order n";
-      return false;
-    }
-
-    return true;
-  }
-
   bool CompositeIntegerGroup::IsGenerator(const Element &a) const
   {
-    return IsGenerator(GetInteger(a));
+    if(IsIdentity(Exponentiate(a, 2))) return false;
+    if(IsIdentity(Exponentiate(a, _s))) return false;
+    if(!IsIdentity(Exponentiate(a, _n))) return false;
+
+    return true;
   }
 
   bool CompositeIntegerGroup::IsProbablyValid() const
@@ -186,7 +170,7 @@ namespace AbstractGroup {
     QByteArray out;
     QDataStream stream(&out, QIODevice::WriteOnly);
 
-    stream << _p << _s << _n << _g;
+    stream << _p << _s << _n << ElementToByteArray(_g);
 
     return out;
   }

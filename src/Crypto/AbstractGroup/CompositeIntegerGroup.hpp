@@ -116,7 +116,7 @@ namespace AbstractGroup {
        * Return the group generator (g)
        */
       inline virtual Element GetGenerator() const { 
-        return Element(new IntegerElementData(_g)); 
+        return _g;
       }
       
       /**
@@ -195,7 +195,6 @@ namespace AbstractGroup {
       }
 
     private:
-      bool IsGenerator(const Integer &a) const;
       Integer GetInteger(const Element &e) const;
 
       /**
@@ -211,7 +210,7 @@ namespace AbstractGroup {
       /**
        * Generator of group
        */
-      Integer _g;
+      Element _g;
 
       /**
        * p = ns + 1

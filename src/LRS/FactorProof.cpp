@@ -25,7 +25,7 @@ namespace LRS {
     CryptoPP::InvertibleRSAFunction rsa;
 
     // RSA encryption exponent is 3
-    rsa.Initialize(rng, n_bits, RsaEncryptionExponent);
+    rsa.Initialize(rng, n_bits, CryptoPP::Integer(RsaEncryptionExponent));
 
     Integer n(new CppIntegerData(rsa.GetModulus()));
     _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(n));
@@ -33,23 +33,45 @@ namespace LRS {
     Hash *hash = CryptoFactory::GetInstance().GetLibrary()->GetHashAlgorithm();
     QByteArray digest = hash->ComputeHash(context);
 
-    // h is in range [0,n)
-    Integer exponent = Integer(digest) % n;
-    // g^h mod P
-    _witness_image = _group->Exponentiate(_group->GetGenerator(), exponent);
+    // m is in range [0,n)
+    const Integer m = Integer(digest) % n;
 
-    CryptoPP::Integer wit_img(Integer(
-          _group->ElementToByteArray(_witness_image)).GetByteArray().constData());
-    CryptoPP::Integer root = rsa.ApplyFunction(wit_img);
+    // g^m mod P
+    _witness_image = _group->Exponentiate(_group->GetGenerator(), m);
+
+    // root = m^{1/e}
+    CryptoPP::Integer crypto_m(("0x" + m.GetByteArray().toHex()).constData());
+    //Q_ASSERT(crypto_m > 0);
+
+    const CryptoPP::Integer root = rsa.CalculateInverse(rng, crypto_m);
+    //Q_ASSERT(root > 0);
+
+    //Q_ASSERT(crypto_m == a_exp_b_mod_c(root, 3, rsa.GetModulus()));
+    //Q_ASSERT(crypto_m == ((root*root*root) % rsa.GetModulus()));
 
     // witness (m) is h^{1/e} mod n
     _witness = Integer(new CppIntegerData(root));
+
+    /*
+    qDebug() << "_witness" << _witness.GetByteArray().toHex();
+    qDebug() << "_n" << n.GetByteArray().toHex();
+    qDebug() << "m" << m.GetByteArray().toHex();
+    qDebug() << "w3" << ((_witness*_witness*_witness)%n).GetByteArray().toHex();
+    */
+
+    //Q_ASSERT(((_witness*_witness*_witness)%n) == m);
+
+    Q_ASSERT(_group->Exponentiate(_group->GetGenerator(), m) ==
+        _group->Exponentiate(_group->Exponentiate(_group->Exponentiate(_group->GetGenerator(), _witness),
+          _witness), _witness));
 
     // tag = g^m
     _linkage_tag = _group->Exponentiate(_group->GetGenerator(), _witness);
     _g1 = _linkage_tag;
     _g2 = _group->Exponentiate(_g1, _witness);
     _g3 = _witness_image;
+
+    Q_ASSERT(_g3 == _group->Exponentiate(_g2, _witness));
   }
 
   FactorProof::FactorProof(QByteArray context,
@@ -111,10 +133,10 @@ namespace LRS {
     _commit_secret = _group->RandomExponent();
 
     // t1 = (g1)^r
-    Element commit_1 = _group->Exponentiate(_g1, _commit_secret);
+    _commit_1 = _group->Exponentiate(_g1, _commit_secret);
 
     // t2 = (g2)^r 
-    Element commit_2 = _group->Exponentiate(_g2, _commit_secret);
+    _commit_2 = _group->Exponentiate(_g2, _commit_secret);
   }
 
   void FactorProof::GenerateChallenge()
@@ -148,6 +170,9 @@ namespace LRS {
 
     // r = s - cx
     _response = (_commit_secret - (_challenge * _witness)) % _group->GetOrder();
+    qDebug() << "===";
+    PrintDebug();
+    qDebug() << "***";
   }
 
   void FactorProof::FakeProve()
@@ -170,6 +195,8 @@ namespace LRS {
 
   bool FactorProof::Verify(bool verify_challenge) const 
   {
+    PrintDebug();
+
     // check_1 = (g1^r)*(g2)^c
     Element check_1 = _group->CascadeExponentiate(_g1, _response, _g2, _challenge);
 
@@ -220,6 +247,18 @@ namespace LRS {
     stream << _group->ElementToByteArray(_commit_1);
     stream << _group->ElementToByteArray(_commit_2);
     return out;
+  }
+
+  void FactorProof::PrintDebug() const
+  {
+    qDebug() << "_g1" << _group->ElementToByteArray(_g1).toHex();
+    qDebug() << "_g2" << _group->ElementToByteArray(_g2).toHex();
+    qDebug() << "_g3" << _group->ElementToByteArray(_g3).toHex();
+    qDebug() << "_linkage_tag" << _group->ElementToByteArray(_linkage_tag).toHex();
+    qDebug() << "_commit_1" << _group->ElementToByteArray(_commit_1).toHex();
+    qDebug() << "_commit_2" << _group->ElementToByteArray(_commit_2).toHex();
+    qDebug() << "_challenge" << _challenge.GetByteArray().toHex();
+    qDebug() << "_response" << _response.GetByteArray().toHex();
   }
 }
 }
