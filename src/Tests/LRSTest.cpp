@@ -110,7 +110,7 @@ namespace Tests {
 
     const int n_bits = 512;
 
-    for(int repeat=0; repeat<5; repeat++) {
+    for(int repeat=0; repeat<1; repeat++) {
       int count = Random::GetInstance().GetInt(TEST_RANGE_MIN, TEST_RANGE_MAX);
       int author_idx = Random::GetInstance().GetInt(0, count);
    

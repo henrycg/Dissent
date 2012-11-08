@@ -260,5 +260,17 @@ namespace LRS {
     qDebug() << "_challenge" << _challenge.GetByteArray().toHex();
     qDebug() << "_response" << _response.GetByteArray().toHex();
   }
+  
+  QByteArray FactorProof::GetWitnessImage() const
+  {
+    QByteArray out;
+    QDataStream stream(&out, QIODevice::WriteOnly);
+
+    stream << _group->GetOrder().GetByteArray();
+    stream << _group->ElementToByteArray(_witness_image);
+
+    return out;
+  }
+
 }
 }

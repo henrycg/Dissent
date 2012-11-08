@@ -93,13 +93,15 @@ namespace LRS {
        * For example, if this is a proof of knowledge of discrete
        * log, return g^x
        */
-      virtual QByteArray GetWitnessImage() const { return _group->ElementToByteArray(_witness_image); }
+      virtual QByteArray GetWitnessImage() const;
 
       /**
        * Get the linkage tag associated with this witness.
        * For example, if we're using discrete log, return h^x
        */
-      inline virtual QByteArray GetLinkageTag() const { return QByteArray(); }
+      inline virtual QByteArray GetLinkageTag() const { 
+        return _group->ElementToByteArray(_linkage_tag); 
+      }
 
       /**
        * Get a serialized representation of the commit
