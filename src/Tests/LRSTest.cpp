@@ -31,7 +31,7 @@ namespace Tests {
     QByteArray context = "abcd";
     SchnorrProof proto(context);
 
-    for(int i=0; i<10; i++) {
+    for(int i=0; i<1; i++) {
       proto.SetWitness(0); 
 
       proto.FakeProve();

@@ -114,7 +114,7 @@ namespace LRS {
     _commit_1 = _group->Exponentiate(_witness_image, _challenge);
     const Element tmp_1 = _group->Exponentiate(_group->GetGenerator(), _response);
     // commit = (g^r) * (g^x)^c
-    _commit_2 = _group->Multiply(tmp_1, _commit_1);
+    _commit_1 = _group->Multiply(tmp_1, _commit_1);
 
     // fake the second commit
     _commit_2 = _group->Exponentiate(_linkage_tag, _challenge);
@@ -125,6 +125,11 @@ namespace LRS {
     // When we're fake proving, we have no commit secret and no witness
     _commit_secret = 0;
     _witness = 0;
+
+    qDebug() << "t1" << _group->ElementToByteArray(_commit_1).toHex();
+    qDebug() << "t2" << _group->ElementToByteArray(_commit_2).toHex();
+    qDebug() << "c" << _challenge.GetByteArray().toHex();
+    qDebug() << "r" << _response.GetByteArray().toHex();
   }
 
   bool SchnorrProof::Verify(bool verify_challenge) const 
@@ -141,14 +146,6 @@ namespace LRS {
     out_1 = _group->Multiply(tmp_1, out_1);
     out_2 = _group->Multiply(tmp_2, out_2);
 
-    // should equal g^{-v} 
-    out_1 = _group->Inverse(out_1);
-    out_2 = _group->Inverse(out_2);
-
-    // should equal g^{-v} * g{v} == g^0 == 1
-    out_1 = _group->Multiply(out_1, _commit_1);
-    out_2 = _group->Multiply(out_2, _commit_2);
-
     // if verify_challenge is set, make sure that challenge is
     // a hash of the commit 
     if(verify_challenge && _challenge != CommitHash()) {
@@ -156,7 +153,20 @@ namespace LRS {
       return false;
     }
 
-    return _group->IsIdentity(out_1) && _group->IsIdentity(out_2);
+    qDebug() << "o1" << _group->ElementToByteArray(out_1).toHex();
+    qDebug() << "o2" << _group->ElementToByteArray(out_2).toHex();
+
+    if(out_1 != _commit_1) {
+      qDebug() << "Commit 1 failed"; 
+      return false;
+    }
+
+    if(out_2 != _commit_2) {
+      qDebug() << "Commit 2 failed"; 
+      return false;
+    }
+
+    return true;
   };
 
   Integer SchnorrProof::CommitHash() const 
