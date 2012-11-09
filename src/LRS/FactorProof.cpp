@@ -38,6 +38,7 @@ namespace LRS {
 
     // g^m mod P
     _witness_image = _group->Exponentiate(_group->GetGenerator(), m);
+    SetWitnessImage(WitnessImageBytes());
 
     // root = m^{1/e}
     CryptoPP::Integer crypto_m(("0x" + m.GetByteArray().toHex()).constData());
@@ -51,6 +52,7 @@ namespace LRS {
 
     // witness (m) is h^{1/e} mod n
     _witness = Integer(new CppIntegerData(root));
+    SetWitness(_witness.GetByteArray());
 
     /*
     qDebug() << "_witness" << _witness.GetByteArray().toHex();
@@ -59,19 +61,13 @@ namespace LRS {
     qDebug() << "w3" << ((_witness*_witness*_witness)%n).GetByteArray().toHex();
     */
 
-    //Q_ASSERT(((_witness*_witness*_witness)%n) == m);
-
-    Q_ASSERT(_group->Exponentiate(_group->GetGenerator(), m) ==
-        _group->Exponentiate(_group->Exponentiate(_group->Exponentiate(_group->GetGenerator(), _witness),
-          _witness), _witness));
-
     // tag = g^m
     _linkage_tag = _group->Exponentiate(_group->GetGenerator(), _witness);
+    SetLinkageTag(_group->ElementToByteArray(_linkage_tag));
+
     _g1 = _linkage_tag;
     _g2 = _group->Exponentiate(_g1, _witness);
     _g3 = _witness_image;
-
-    Q_ASSERT(_g3 == _group->Exponentiate(_g2, _witness));
   }
 
   FactorProof::FactorProof(QByteArray context,
@@ -86,8 +82,14 @@ namespace LRS {
     stream >> n_bytes >> wi_bytes;
 
     _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(Integer(n_bytes)));
+
+    SetWitness(witness);
+
     _witness_image = _group->ElementFromByteArray(wi_bytes);
+    SetWitnessImage(WitnessImageBytes());
+
     _linkage_tag = _group->Exponentiate(_group->GetGenerator(), _witness);
+    SetLinkageTag(_group->ElementToByteArray(_linkage_tag));
 
     _g1 = _linkage_tag;
     _g2 = _group->Exponentiate(_g1, _witness);
@@ -105,6 +107,12 @@ namespace LRS {
     _challenge(challenge),
     _response(response)
   {
+    SetWitnessImage(witness_image);
+    SetLinkageTag(linkage_tag);
+    SetCommit(commit);
+    SetChallenge(_challenge);
+    SetResponse(response);
+
     QDataStream w_stream(witness_image);
     QByteArray n_bytes, wi_bytes;
     w_stream >> n_bytes >> wi_bytes;
@@ -123,6 +131,12 @@ namespace LRS {
     _g1 = _linkage_tag;
     _g2 = _group->RandomElement();
     _g3 = _witness_image;
+
+    qDebug() << "Unserialized......";
+    qDebug() << "_witness_image" << _group->ElementToByteArray(_witness_image).toHex();
+    qDebug() << "_linkage_tag" << _group->ElementToByteArray(_linkage_tag).toHex();
+    qDebug() << "_commit_1" << _group->ElementToByteArray(_commit_1).toHex();
+    qDebug() << "_commit_2" << _group->ElementToByteArray(_commit_2).toHex();
   }
 
   FactorProof::~FactorProof() {};
@@ -137,11 +151,14 @@ namespace LRS {
 
     // t2 = (g2)^r 
     _commit_2 = _group->Exponentiate(_g2, _commit_secret);
+
+    SetCommit(CommitBytes());
   }
 
   void FactorProof::GenerateChallenge()
   {
     _challenge = CommitHash();
+    SetChallenge(_challenge);
   }
 
   void FactorProof::Prove(QByteArray challenge)
@@ -155,6 +172,7 @@ namespace LRS {
 
     // Replace the rightmost bytes of e with the challenge
     _challenge = Integer(e_bytes.left(e_bytes.count() - challenge.count()) + challenge);
+    SetChallenge(_challenge);
 
     Prove();
   }
@@ -170,9 +188,7 @@ namespace LRS {
 
     // r = s - cx
     _response = (_commit_secret - (_challenge * _witness)) % _group->GetOrder();
-    qDebug() << "===";
-    PrintDebug();
-    qDebug() << "***";
+    SetResponse(_response.GetByteArray());
   }
 
   void FactorProof::FakeProve()
@@ -191,6 +207,10 @@ namespace LRS {
     // When we're fake proving, we have no commit secret and no witness
     _commit_secret = 0;
     _witness = 0;
+
+    SetChallenge(_challenge);
+    SetResponse(_response.GetByteArray());
+    SetCommit(CommitBytes());
   }
 
   bool FactorProof::Verify(bool verify_challenge) const 
@@ -240,7 +260,7 @@ namespace LRS {
     return Integer(hash->ComputeHash()) % _group->GetOrder();
   }
 
-  QByteArray FactorProof::GetCommit() const
+  QByteArray FactorProof::CommitBytes() const
   {
     QByteArray out;
     QDataStream stream(&out, QIODevice::WriteOnly);
@@ -261,7 +281,7 @@ namespace LRS {
     qDebug() << "_response" << _response.GetByteArray().toHex();
   }
   
-  QByteArray FactorProof::GetWitnessImage() const
+  QByteArray FactorProof::WitnessImageBytes() const
   {
     QByteArray out;
     QDataStream stream(&out, QIODevice::WriteOnly);

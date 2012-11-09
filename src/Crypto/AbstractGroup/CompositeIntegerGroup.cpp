@@ -22,9 +22,11 @@ namespace AbstractGroup {
       for(_s=3; ; _s = _s+1) {
         if(!_s.IsPrime()) continue;
         _p = (2 * _s * _n) + 1;
+        /*
         qDebug() << "s" << _s.GetByteArray().toHex();
         qDebug() << "n" << _n.GetByteArray().toHex();
         qDebug() << "p" << _p.GetByteArray().toHex();
+        */
         if(_p.IsPrime()) break;
       }
 

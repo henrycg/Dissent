@@ -32,8 +32,6 @@ namespace Tests {
     SchnorrProof proto(context);
 
     for(int i=0; i<1; i++) {
-      proto.SetWitness(0); 
-
       proto.FakeProve();
       EXPECT_TRUE(proto.Verify(false));
     }
@@ -78,12 +76,35 @@ namespace Tests {
   {
     const int n_bits = 512;
     FactorProof proof(n_bits, "abcd");
-    for(int i=0; i<2; i++) {
+    for(int i=0; i<20; i++) {
       proof.GenerateCommit();
       proof.GenerateChallenge();
 
       proof.Prove();
       EXPECT_TRUE(proof.Verify());
+
+      proof.Prove(QByteArray("short"));
+      EXPECT_TRUE(proof.Verify(false));
+    }
+  }
+
+  TEST(LRSProofTest, FactorProveSerialized)
+  {
+    const int n_bits = 512;
+    FactorProof proof(n_bits, "abcd");
+    for(int i=0; i<20; i++) {
+      proof.GenerateCommit();
+      proof.GenerateChallenge();
+      proof.Prove();
+
+      FactorProof ser("abcd", 
+          proof.GetWitnessImage(),
+          proof.GetLinkageTag(),
+          proof.GetCommit(),
+          proof.GetChallenge().GetByteArray(),
+          proof.GetResponse());
+
+      EXPECT_TRUE(ser.Verify());
 
       proof.Prove(QByteArray("short"));
       EXPECT_TRUE(proof.Verify(false));
@@ -96,8 +117,6 @@ namespace Tests {
     FactorProof proto(n_bits, "abcd");
 
     for(int i=0; i<20; i++) {
-      proto.SetWitness(0); 
-
       proto.FakeProve();
       EXPECT_TRUE(proto.Verify(false));
     }

@@ -22,6 +22,9 @@ namespace LRS {
     _tag_generator(_group->HashIntoElement(context)),
     _linkage_tag(_group->Exponentiate(_tag_generator, _witness))
   {
+    SetWitness(_witness.GetByteArray());
+    SetWitnessImage(_group->ElementToByteArray(_witness_image));
+    SetLinkageTag(_group->ElementToByteArray(_linkage_tag));
   }
 
   SchnorrProof::SchnorrProof(QByteArray context,
@@ -30,11 +33,14 @@ namespace LRS {
     SigmaProof(ProofType_SchnorrProof),
     _group(CppECGroup::GetGroup(ECParams::NIST_P192)),
     _context(context),
-    _witness(witness),
     _witness_image(_group->ElementFromByteArray(witness_image)),
     _tag_generator(_group->HashIntoElement(context)),
     _linkage_tag(_group->Exponentiate(_tag_generator, _witness))
-  {}
+  {
+    SetWitness(witness); 
+    SetWitnessImage(witness_image); 
+    SetLinkageTag(_group->ElementToByteArray(_linkage_tag)); 
+  }
 
   SchnorrProof::SchnorrProof(QByteArray context,
       QByteArray witness_image,
@@ -57,6 +63,12 @@ namespace LRS {
     stream >> bytes_1 >> bytes_2;
     _commit_1 = _group->ElementFromByteArray(bytes_1);
     _commit_2 = _group->ElementFromByteArray(bytes_2);
+
+    SetWitnessImage(witness_image);
+    SetLinkageTag(linkage_tag);
+    SetChallenge(_challenge);
+    SetResponse(response);
+    SetCommit(commit);
   }
 
   SchnorrProof::~SchnorrProof() {};
@@ -68,11 +80,14 @@ namespace LRS {
     _commit_secret = _group->RandomExponent();
     _commit_1 = _group->Exponentiate(_group->GetGenerator(), _commit_secret);
     _commit_2 = _group->Exponentiate(_tag_generator, _commit_secret);
+
+    SetCommit(CommitBytes(_commit_1, _commit_2));
   };
 
   void SchnorrProof::GenerateChallenge()
   {
     _challenge = CommitHash();
+    SetChallenge(_challenge);
   }
 
   void SchnorrProof::Prove(QByteArray challenge)
@@ -90,6 +105,7 @@ namespace LRS {
     Q_ASSERT(e_orig_len == final.count());
 
     _challenge = Integer(final);  
+    SetChallenge(_challenge);
     Prove();
   }
 
@@ -102,6 +118,7 @@ namespace LRS {
     // r = v - cx
     _response = (_commit_secret - 
         (_witness.MultiplyMod(_challenge, _group->GetOrder()))) % _group->GetOrder();
+    SetResponse(_response.GetByteArray());
   }
 
   void SchnorrProof::FakeProve()
@@ -130,6 +147,10 @@ namespace LRS {
     qDebug() << "t2" << _group->ElementToByteArray(_commit_2).toHex();
     qDebug() << "c" << _challenge.GetByteArray().toHex();
     qDebug() << "r" << _response.GetByteArray().toHex();
+
+    SetCommit(CommitBytes(_commit_1, _commit_2));
+    SetChallenge(_challenge);
+    SetResponse(_response.GetByteArray());
   }
 
   bool SchnorrProof::Verify(bool verify_challenge) const 
@@ -192,13 +213,13 @@ namespace LRS {
     return Integer(hash->ComputeHash()) % _group->GetOrder();
   }
 
-  QByteArray SchnorrProof::GetCommit() const
+  QByteArray SchnorrProof::CommitBytes(Element commit_1, Element commit_2) const
   {
     QByteArray out;
     QDataStream stream(&out, QIODevice::WriteOnly);
 
-    const QByteArray bytes_1 = _group->ElementToByteArray(_commit_1);
-    const QByteArray bytes_2 = _group->ElementToByteArray(_commit_2);
+    const QByteArray bytes_1 = _group->ElementToByteArray(commit_1);
+    const QByteArray bytes_2 = _group->ElementToByteArray(commit_2);
     stream << bytes_1 << bytes_2;
 
     return out;

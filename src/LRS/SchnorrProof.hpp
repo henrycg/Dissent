@@ -78,43 +78,8 @@ namespace LRS {
        */
       virtual bool Verify(bool verify_challenge=true) const;
 
-      /**
-       * Set the witness
-       */
-      inline void SetWitness(Integer w) { _witness = w; }
-
-      /**
-       * Get the image of the witness for this proof of knowledge.
-       * For example, if this is a proof of knowledge of discrete
-       * log, return g^x
-       */
-      virtual QByteArray GetWitnessImage() const { return _group->ElementToByteArray(_witness_image); }
-
-      /**
-       * Get the linkage tag associated with this witness.
-       * For example, if we're using discrete log, return h^x
-       */
-      virtual QByteArray GetLinkageTag() const { return _group->ElementToByteArray(_linkage_tag); }
-
-      /**
-       * Get a serialized representation of the commit
-       * for this Sigma proof
-       */
-      virtual QByteArray GetCommit() const; 
-
-      /**
-       * Get the challenge integer for this proof
-       */
-      virtual inline Integer GetChallenge() const { return _challenge; }
-
-      /**
-       * Get a serialized representation of the response
-       * for this Sigma proof
-       */
-      virtual QByteArray GetResponse() const { return _response.GetByteArray(); }
-
     private:
-
+      QByteArray CommitBytes(Element commit_1, Element commit_2) const; 
       Integer CommitHash() const;
 
       QSharedPointer<AbstractGroup> _group;

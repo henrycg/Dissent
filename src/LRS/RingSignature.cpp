@@ -32,6 +32,7 @@ namespace LRS {
     for(int i=0; i<count; i++) {
       if(i == _real_idx) {
         _proofs[i]->GenerateCommit();
+        _proofs[i]->GenerateChallenge();
       } else {
         _proofs[i]->FakeProve();
       }
@@ -67,7 +68,7 @@ namespace LRS {
     // commits:   t1, t2, ..., tN
     // challenge: c
     // responses: r1, r2, ..., rN
-
+  
     _proofs[_real_idx]->Prove(final);
 
     QList<QList<QByteArray> > sig_pieces;
