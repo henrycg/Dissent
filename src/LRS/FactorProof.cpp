@@ -38,7 +38,6 @@ namespace LRS {
 
     // g^m mod P
     _witness_image = _group->Exponentiate(_group->GetGenerator(), m);
-    SetWitnessImage(WitnessImageBytes());
 
     // root = m^{1/e}
     CryptoPP::Integer crypto_m(("0x" + m.GetByteArray().toHex()).constData());
@@ -68,6 +67,8 @@ namespace LRS {
     _g1 = _linkage_tag;
     _g2 = _group->Exponentiate(_g1, _witness);
     _g3 = _witness_image;
+
+    SetWitnessImage(WitnessImageBytes());
   }
 
   FactorProof::FactorProof(QByteArray context,
@@ -78,15 +79,14 @@ namespace LRS {
     _witness(witness)
   {
     QDataStream stream(witness_image);
-    QByteArray n_bytes, wi_bytes;
-    stream >> n_bytes >> wi_bytes;
+    QByteArray n_bytes, wi_bytes, g2_bytes;
+    stream >> n_bytes >> wi_bytes >> g2_bytes;
 
     _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(Integer(n_bytes)));
 
     SetWitness(witness);
 
     _witness_image = _group->ElementFromByteArray(wi_bytes);
-    SetWitnessImage(WitnessImageBytes());
 
     _linkage_tag = _group->Exponentiate(_group->GetGenerator(), _witness);
     SetLinkageTag(_group->ElementToByteArray(_linkage_tag));
@@ -94,6 +94,8 @@ namespace LRS {
     _g1 = _linkage_tag;
     _g2 = _group->Exponentiate(_g1, _witness);
     _g3 = _witness_image;
+
+    SetWitnessImage(WitnessImageBytes());
   }
 
   FactorProof::FactorProof(QByteArray context,
@@ -114,8 +116,10 @@ namespace LRS {
     SetResponse(response);
 
     QDataStream w_stream(witness_image);
-    QByteArray n_bytes, wi_bytes;
-    w_stream >> n_bytes >> wi_bytes;
+    QByteArray n_bytes, wi_bytes, g2_bytes;
+    w_stream >> n_bytes >> wi_bytes >> g2_bytes;
+
+    qDebug() << "n" << n_bytes.toHex();
 
     _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(Integer(n_bytes)));
     _witness_image = _group->ElementFromByteArray(wi_bytes);
@@ -129,9 +133,8 @@ namespace LRS {
     _commit_2 = _group->ElementFromByteArray(c2_bytes);
 
     _g1 = _linkage_tag;
-    _g2 = _group->RandomElement();
+    _g2 = _group->ElementFromByteArray(g2_bytes);
     _g3 = _witness_image;
-
 
     qDebug() << "Unserialized......";
     qDebug() << "_witness_image" << _group->ElementToByteArray(_witness_image).toHex();
@@ -289,6 +292,7 @@ namespace LRS {
 
     stream << _group->GetOrder().GetByteArray();
     stream << _group->ElementToByteArray(_witness_image);
+    stream << _group->ElementToByteArray(_g2);
 
     return out;
   }

@@ -31,7 +31,7 @@ namespace Tests {
     QByteArray context = "abcd";
     SchnorrProof proto(context);
 
-    for(int i=0; i<1; i++) {
+    for(int i=0; i<10; i++) {
       proto.FakeProve();
       EXPECT_TRUE(proto.Verify(false));
     }
@@ -42,7 +42,7 @@ namespace Tests {
     Library *lib = CryptoFactory::GetInstance().GetLibrary();
     QScopedPointer<Dissent::Utils::Random> rand(lib->GetRandomNumberGenerator());
 
-    for(int repeat=0; repeat<1; repeat++) {
+    for(int repeat=0; repeat<5; repeat++) {
       int count = Random::GetInstance().GetInt(TEST_RANGE_MIN, TEST_RANGE_MAX);
       int author_idx = Random::GetInstance().GetInt(0, count);
    
@@ -129,7 +129,7 @@ namespace Tests {
 
     const int n_bits = 512;
 
-    for(int repeat=0; repeat<1; repeat++) {
+    for(int repeat=0; repeat<5; repeat++) {
       int count = Random::GetInstance().GetInt(TEST_RANGE_MIN, TEST_RANGE_MAX);
       int author_idx = Random::GetInstance().GetInt(0, count);
    

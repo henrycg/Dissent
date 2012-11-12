@@ -44,6 +44,11 @@ namespace AbstractGroup {
       }
 
       _g = Element(new IntegerElementData(g));
+
+      /*
+      qDebug() << "_p" << _p.GetByteArray().toHex();
+      qDebug() << "_s" << _s.GetByteArray().toHex();
+      */
     };
 
   QSharedPointer<AbstractGroup> CompositeIntegerGroup::Copy() const
