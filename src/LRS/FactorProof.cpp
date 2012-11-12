@@ -132,6 +132,7 @@ namespace LRS {
     _g2 = _group->RandomElement();
     _g3 = _witness_image;
 
+
     qDebug() << "Unserialized......";
     qDebug() << "_witness_image" << _group->ElementToByteArray(_witness_image).toHex();
     qDebug() << "_linkage_tag" << _group->ElementToByteArray(_linkage_tag).toHex();
