@@ -1,6 +1,8 @@
 
+#include <cryptopp/cryptlib.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/rsa.h>
+#include <cryptopp/pssr.h>
 
 #include "Crypto/AbstractGroup/CompositeIntegerGroup.hpp"
 #include "Crypto/CppIntegerData.hpp"
@@ -17,7 +19,7 @@ using Dissent::Utils::Random;
 namespace Dissent {
 namespace LRS {
 
-  FactorProof::FactorProof(int n_bits, QByteArray context) :
+  FactorProof::FactorProof(QByteArray context, int n_bits) :
     SigmaProof(ProofType_FactorProof),
     _context(context)
   {
@@ -68,6 +70,75 @@ namespace LRS {
     _g2 = _group->Exponentiate(_g1, _witness);
     _g3 = _witness_image;
 
+    SetWitnessImage(WitnessImageBytes());
+  }
+
+  FactorProof::FactorProof(QByteArray context, QSslKey key) :
+    SigmaProof(ProofType_FactorProof),
+    _context(context)
+  {
+    // make sure it's an RSA key
+    if(key.algorithm() != QSsl::Rsa) {
+      qFatal("FactorProof called with non-RSA key");
+    }
+
+    if(key.type() != QSsl::PublicKey) {
+      qFatal("Only implemented for public keys");
+    }
+
+    // decode key into crypto key
+    CryptoPP::ByteQueue buf;
+
+    QByteArray key_bytes = key.toDer();
+
+    qDebug() << key_bytes.toHex();
+    buf.Put(reinterpret_cast<const byte*>(key_bytes.constData()), key_bytes.count(), true);
+    buf.MessageEnd();
+
+    //CryptoPP::RSASS<CryptoPP::PSSR, CryptoPP::SHA1>::Verifier verifier(buf);
+    CryptoPP::RSAFunction rsa;
+    rsa.BERDecode(buf);
+
+    // get modulus
+    Integer n(new CppIntegerData(rsa.GetModulus()));
+    qDebug() << "n" << n.GetByteArray().toHex();
+
+    // create group
+    _group = QSharedPointer<CompositeIntegerGroup>(new CompositeIntegerGroup(n));
+
+    Hash *hash = CryptoFactory::GetInstance().GetLibrary()->GetHashAlgorithm();
+    QByteArray digest = hash->ComputeHash(context);
+
+    // m is in range [0,n)
+    const Integer m = Integer(digest) % n;
+
+    // g^m mod P
+    _witness_image = _group->Exponentiate(_group->GetGenerator(), m);
+
+    // root = m^{1/e}
+    CryptoPP::Integer crypto_m(("0x" + m.GetByteArray().toHex()).constData());
+    //Q_ASSERT(crypto_m > 0);
+
+    //Q_ASSERT(root > 0);
+
+    //Q_ASSERT(crypto_m == a_exp_b_mod_c(root, 3, rsa.GetModulus()));
+    //Q_ASSERT(crypto_m == ((root*root*root) % rsa.GetModulus()));
+
+    /*
+    qDebug() << "_witness" << _witness.GetByteArray().toHex();
+    qDebug() << "_n" << n.GetByteArray().toHex();
+    qDebug() << "m" << m.GetByteArray().toHex();
+    qDebug() << "w3" << ((_witness*_witness*_witness)%n).GetByteArray().toHex();
+    */
+
+    // tag = g^m
+    _linkage_tag = _group->RandomElement();
+
+    _g1 = _linkage_tag;
+    _g2 = _group->RandomElement(); 
+    _g3 = _witness_image;
+
+    SetLinkageTag(_group->ElementToByteArray(_linkage_tag));
     SetWitnessImage(WitnessImageBytes());
   }
 

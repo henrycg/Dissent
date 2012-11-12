@@ -1,6 +1,8 @@
 #ifndef DISSENT_LRS_FACTOR_PROOF_H_GUARD
 #define DISSENT_LRS_FACTOR_PROOF_H_GUARD
 
+#include <QSslKey>
+
 #include "Crypto/AbstractGroup/AbstractGroup.hpp"
 #include "Crypto/AbstractGroup/Element.hpp"
 
@@ -25,7 +27,9 @@ namespace LRS {
       /**
        * Constructor
        */
-      FactorProof(int n_bits, QByteArray context);
+      FactorProof(QByteArray context, int n_bits);
+
+      FactorProof(QByteArray context, QSslKey public_key);
 
       FactorProof(QByteArray context, 
           QByteArray witness, 

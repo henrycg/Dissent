@@ -22,11 +22,9 @@ namespace AbstractGroup {
       for(_s=3; ; _s = _s+1) {
         if(!_s.IsPrime()) continue;
         _p = (2 * _s * _n) + 1;
-        /*
+        
         qDebug() << "s" << _s.GetByteArray().toHex();
-        qDebug() << "n" << _n.GetByteArray().toHex();
-        qDebug() << "p" << _p.GetByteArray().toHex();
-        */
+        
         if(_p.IsPrime()) break;
       }
 
@@ -41,6 +39,8 @@ namespace AbstractGroup {
         // Since we do not know the factorization of n=qr, 
         // we might be generating a subgroup of order q or r. 
         if(g.Pow(2, _p) != 1 && g.Pow(_s, _p) != 1 && g.Pow(_n, _p) == 1) break;
+
+        qDebug() << "g" << g.GetByteArray().toHex();
       }
 
       _g = Element(new IntegerElementData(g));

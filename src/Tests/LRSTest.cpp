@@ -7,9 +7,8 @@ namespace Tests {
     public ::testing::TestWithParam<QSharedPointer<AbstractGroup::AbstractGroup> > {
   };
 
-  TEST_P(LRSProofTest, SchnorrProve)
+  TEST(LRSProofTest, SchnorrProve)
   {
-    //SchnorrProof proto(GetParam());
     QByteArray context = "abcd";
     SchnorrProof proto(context);
 
@@ -25,9 +24,8 @@ namespace Tests {
     }
   }
 
-  TEST_P(LRSProofTest, SchnorrProveFake)
+  TEST(LRSProofTest, SchnorrProveFake)
   {
-    //SchnorrProof proto(GetParam());
     QByteArray context = "abcd";
     SchnorrProof proto(context);
 
@@ -37,7 +35,7 @@ namespace Tests {
     }
   }
 
-  TEST_P(LRSProofTest, SchnorrRing)
+  TEST(LRSProofTest, SchnorrRing)
   {
     Library *lib = CryptoFactory::GetInstance().GetLibrary();
     QScopedPointer<Dissent::Utils::Random> rand(lib->GetRandomNumberGenerator());
@@ -65,17 +63,10 @@ namespace Tests {
     }
   }
 
-  INSTANTIATE_TEST_CASE_P(LRS, LRSProofTest,
-      ::testing::Values(
-        IntegerGroup::GetGroup(IntegerGroup::TESTING_512),
-        CppECGroup::GetGroup(ECParams::NIST_P192),
-        OpenECGroup::GetGroup(ECParams::NIST_P192),
-        BotanECGroup::GetGroup(ECParams::NIST_P192)));
-
   TEST(LRSProofTest, FactorProve)
   {
     const int n_bits = 512;
-    FactorProof proof(n_bits, "abcd");
+    FactorProof proof("abcd", n_bits);
     for(int i=0; i<20; i++) {
       proof.GenerateCommit();
       proof.GenerateChallenge();
@@ -91,7 +82,7 @@ namespace Tests {
   TEST(LRSProofTest, FactorProveSerialized)
   {
     const int n_bits = 512;
-    FactorProof proof(n_bits, "abcd");
+    FactorProof proof("abcd", n_bits);
     for(int i=0; i<20; i++) {
       proof.GenerateCommit();
       proof.GenerateChallenge();
@@ -114,7 +105,7 @@ namespace Tests {
   TEST(LRSProofTest, FactorProveFake)
   {
     const int n_bits = 512;
-    FactorProof proto(n_bits, "abcd");
+    FactorProof proto("abcd", n_bits);
 
     for(int i=0; i<20; i++) {
       proto.FakeProve();
@@ -135,7 +126,7 @@ namespace Tests {
    
       QList<QSharedPointer<SigmaProof> > list;
       for(int j=0; j<count; j++) {
-        list.append(QSharedPointer<SigmaProof>(new FactorProof(n_bits, "abcd")));
+        list.append(QSharedPointer<SigmaProof>(new FactorProof("abcd", n_bits)));
       }
 
       QByteArray msg(1024, '\0');
@@ -157,9 +148,9 @@ namespace Tests {
     Library *lib = CryptoFactory::GetInstance().GetLibrary();
     QScopedPointer<Dissent::Utils::Random> rand(lib->GetRandomNumberGenerator());
 
-    const int n_bits = 2048;
+    const int n_bits = 512;
 
-    for(int repeat=0; repeat<5; repeat++) {
+    for(int repeat=0; repeat<1; repeat++) {
       int count = Random::GetInstance().GetInt(TEST_RANGE_MIN, TEST_RANGE_MAX);
       int author_idx = Random::GetInstance().GetInt(0, count);
    
@@ -168,7 +159,7 @@ namespace Tests {
         // Mix Schnorr and Factor proofs
         list.append(
           Random::GetInstance().GetInt(0, 2) ? 
-          QSharedPointer<SigmaProof>(new FactorProof(n_bits, "abcd")) : 
+          QSharedPointer<SigmaProof>(new FactorProof("abcd", n_bits)) : 
           QSharedPointer<SigmaProof>(new SchnorrProof("abcd")));
       }
 

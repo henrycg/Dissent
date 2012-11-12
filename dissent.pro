@@ -169,6 +169,7 @@ HEADERS += ext/joyent-http-parser/http_parser.h \
            src/Identity/GroupHolder.hpp \
            src/Identity/PrivateIdentity.hpp \
            src/Identity/PublicIdentity.hpp \
+           src/LRS/CertificateFetcher.hpp \
            src/LRS/FactorProof.hpp \
            src/LRS/RingSignature.hpp \
            src/LRS/SchnorrProof.hpp \
@@ -359,6 +360,7 @@ SOURCES += ext/joyent-http-parser/http_parser.c \
            src/Identity/Authentication/LRSAuthenticator.cpp \
            src/Identity/Authentication/PreExchangedKeyAuthenticate.cpp \
            src/Identity/Authentication/PreExchangedKeyAuthenticator.cpp \
+           src/LRS/CertificateFetcher.cpp \
            src/LRS/FactorProof.cpp \
            src/LRS/RingSignature.cpp \
            src/LRS/SchnorrProof.cpp \
