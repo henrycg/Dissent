@@ -31,9 +31,11 @@ namespace LRS {
 
     for(int i=0; i<count; i++) {
       if(i == _real_idx) {
+        // Generate commit and challenge for real proof
         _proofs[i]->GenerateCommit();
         _proofs[i]->GenerateChallenge();
       } else {
+        // Generate fake proofs
         _proofs[i]->FakeProve();
       }
 
@@ -43,30 +45,41 @@ namespace LRS {
 
     for(int i=0; i<count; i++) {
       _witness_images.append(_proofs[i]->GetWitnessImage());
-      _linkage_tags.append(_proofs[i]->GetLinkageTag());
+      //_linkage_tags.append(_proofs[i]->GetLinkageTag());
       _proof_types.append(_proofs[i]->GetProofType());
     }
 
+    // Challenge is a hash of all commits
     QByteArray challenge = CreateChallenge(msg, commits);
     const int chal_len = challenge.count();
 
-    qDebug() << "Master c" << challenge.toHex();
+    //qDebug() << "Master c" << challenge.toHex();
 
     // XOR all challenges together
     QByteArray final = challenge;
     for(int i=0; i<count; i++) {
       if(i == _real_idx) continue;
       QByteArray right = challenges[i].right(chal_len);
-      qDebug() << "chal" << i << challenges[i].toHex();
+      //qDebug() << "chal" << i << challenges[i].toHex();
       final = Xor(final, right); 
     }
-    qDebug() << "Final c" << final.toHex();
+    //qDebug() << "Final c" << final.toHex();
 
-    // The final challenge is given to the true prover
+    // The final challenge is given to the true prover.
+    // If the real proof has index i, the prover gets 
+    // a challenge of the form:
+    //   c = HASH(msg, t1, t2, ..., tN) 
+    //        XOR c1 
+    //        XOR ... 
+    //        XOR c{i-1} 
+    //        XOR c{i+1} 
+    //        XOR ... 
+    //        XOR cN
+    
 
-    // The final proof is then
+    // The final signature is then
     // commits:   t1, t2, ..., tN
-    // challenge: c
+    // challenge: c1, c2, ..., cN
     // responses: r1, r2, ..., rN
   
     _proofs[_real_idx]->Prove(final);
@@ -87,6 +100,12 @@ namespace LRS {
     }
     sig_pieces.append(responses);
 
+    QList<QByteArray> linkage_tags;
+    for(int i=0; i<count; i++) {
+      linkage_tags.append(_proofs[i]->GetLinkageTag());
+    }
+    sig_pieces.append(linkage_tags);
+
     QByteArray sig;
     QDataStream stream(&sig, QIODevice::WriteOnly);
     stream << sig_pieces;
@@ -100,7 +119,7 @@ namespace LRS {
     QDataStream stream(sig);
     stream >> sig_pieces;
     
-    if(sig_pieces.count() != 3) {
+    if(sig_pieces.count() != 4) {
       qWarning() << "sig_pieces has wrong length";
       return false;
     }
@@ -108,6 +127,7 @@ namespace LRS {
     QList<QByteArray> commits = sig_pieces[0];
     QList<QByteArray> challenges = sig_pieces[1];
     QList<QByteArray> responses = sig_pieces[2];
+    QList<QByteArray> linkage_tags = sig_pieces[3];
 
     if(_witness_images.count() != responses.count()) {
       qWarning() << "_witness_images.count() != responses.count()";
@@ -124,6 +144,11 @@ namespace LRS {
       return false;
     }
 
+    if(commits.count() != linkage_tags.count()) {
+      qWarning() << "commits.count() != linkage_tags.count()";
+      return false;
+    }
+
     QList<QSharedPointer<SigmaProof> > proofs;
 
     // unserialize the protocols
@@ -135,7 +160,7 @@ namespace LRS {
         case SigmaProof::ProofType_FactorProof:
           p = QSharedPointer<SigmaProof>(new FactorProof(_context,
                 _witness_images[i],
-                _linkage_tags[i],
+                linkage_tags[i],
                 commits[i], 
                 challenges[i], 
                 responses[i]));
@@ -144,7 +169,7 @@ namespace LRS {
         case SigmaProof::ProofType_SchnorrProof:
           p = QSharedPointer<SigmaProof>(new SchnorrProof(_context,
                 _witness_images[i],
-                _linkage_tags[i],
+                linkage_tags[i],
                 commits[i], 
                 challenges[i], 
                 responses[i]));

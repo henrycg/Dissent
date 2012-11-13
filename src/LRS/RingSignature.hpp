@@ -17,6 +17,9 @@ namespace LRS {
 
       /**
        * Constructor
+       * @param proofs SigmaProofs to use for signature
+       * @param real_idx index of proof for which the signer knows
+       *                 the witness
        */
       RingSignature(QByteArray context,
           QList<QSharedPointer<SigmaProof> > proofs, 
@@ -27,8 +30,17 @@ namespace LRS {
        */
       virtual ~RingSignature();
 
+      /**
+       * Sign the message using the ring signature scheme
+       * @param msg message to be signed
+       */
       QByteArray Sign(const QByteArray msg);
 
+      /**
+       * Verify a ring signature
+       * @param msg message 
+       * @param sig signature
+       */
       bool Verify(const QByteArray msg, const QByteArray sig);
 
     private:
@@ -43,7 +55,6 @@ namespace LRS {
       int _real_idx;
 
       QList<QByteArray> _witness_images;
-      QList<QByteArray> _linkage_tags;
   };
 
 }
