@@ -23,24 +23,21 @@ namespace AbstractGroup {
         if(!_s.IsPrime()) continue;
         _p = (2 * _s * _n) + 1;
         
-        qDebug() << "s" << _s.GetByteArray().toHex();
-        
         if(_p.IsPrime()) break;
       }
 
       // Set g to some random element
 
-      Integer g;
+      Integer g, h;
+      const Integer e_test = 2*_s;
       for(Integer i=0; ; i = i+1) {
-        g = (Integer(seed) + i) % _p;
+        h = (Integer(seed) + i) % _p;
 
         // Make sure that g generates a subgroup that is bigger
         // than order 2 and s and smaller than order P. 
         // Since we do not know the factorization of n=qr, 
         // we might be generating a subgroup of order q or r. 
-        if(g.Pow(2, _p) != 1 && g.Pow(_s, _p) != 1 && g.Pow(_n, _p) == 1) break;
-
-        qDebug() << "g" << g.GetByteArray().toHex();
+        if((g = h.Pow(e_test, _p)) != 1) break;
       }
 
       _g = Element(new IntegerElementData(g));

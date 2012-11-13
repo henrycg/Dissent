@@ -15,8 +15,8 @@ int main(int argc, char **argv) {
   sites << "mail.google.com";
   sites << "www.amazon.com";
   sites << "www.mit.edu";
-  /*
   sites << "www.verisign.com";
+  /*
   sites << "www.dell.com";
   sites << "www.softlayer.com";
   sites << "www.berkeley.edu";
