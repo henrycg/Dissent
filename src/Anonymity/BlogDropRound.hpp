@@ -304,8 +304,14 @@ namespace BlogDropPrivate {
           /* Blogdrop server bins */
           QList<QSharedPointer<BlogDropServer> > blogdrop_servers;
 
-          /* Serialized hash[id] = serialized list of serialized ciphertexts */
-          QHash<Id,QByteArray> client_ciphertexts;
+          /*
+           * Serialized hash[id] = serialized list of serialized ciphertexts 
+           */
+
+          /* From my clients */
+          QHash<Id,QByteArray> my_client_ciphertexts; 
+          /* From all clients */
+          QHash<Id,QByteArray> all_client_ciphertexts; 
 
           QByteArray my_ciphertext;
 
@@ -439,6 +445,12 @@ namespace BlogDropPrivate {
 
       void ProcessCleartext();
       void ConcludeClientCiphertextSubmission(const int &);
+
+      /**
+       * Useful because you cannot throw an exception inside
+       * of a Qt thread
+       */
+      void Abort(const QString reason);
 
       inline bool SlotIsOpen(int slot_idx);
 
