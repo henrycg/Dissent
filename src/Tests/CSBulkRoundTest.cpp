@@ -23,6 +23,7 @@ namespace Tests {
         Group::ManagedSubgroup);
   }
 
+#ifndef CS_BLOG_DROP
   TEST(CSBulkRound, PeerDisconnectMiddleManaged)
   {
     RoundTest_PeerDisconnectMiddle(SessionCreator(TCreateRound<CSBulkRound>),
@@ -49,6 +50,7 @@ namespace Tests {
     RoundTest_MultiRound(SessionCreator(TCreateBulkRound<CSBulkRound, NeffKeyShuffle>),
         Group::ManagedSubgroup);
   }
+#endif
 
   TEST(CSBulkRound, BadClient)
   {
