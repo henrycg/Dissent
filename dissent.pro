@@ -8,6 +8,9 @@ DEPENDPATH +=
 INCLUDEPATH += ext/joyent-http-parser/ ext/qt-json/ src/ ext/qxt ext/PBCWrapper-0.8.0 /usr/include/botan-1.10/
 CONFIG += qt debug
 QT = core network
+QMAKE_CXX = g++-4.6
+
+# Dissent Wire protocol version
 DEFINES += "VERSION=3"
 QMAKE_CXXFLAGS += -Werror
 QMAKE_CFLAGS += -Werror
