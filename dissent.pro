@@ -3,6 +3,7 @@ TARGET = dissent
 DEPENDPATH += 
 CONFIG += qt debug
 QT = core network
+QMAKE_CXX = g++-4.6
 
 # Dissent Wire protocol version
 DEFINES += "VERSION=3"
