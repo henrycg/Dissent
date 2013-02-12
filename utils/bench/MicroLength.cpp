@@ -163,7 +163,7 @@ namespace Benchmarks {
 
       start = QDateTime::currentMSecsSinceEpoch();
       for(int i=0; i<p->n_verify; i++) {
-        server.AddClientCiphertext(c, master_client_pks[0]);  
+        server.AddClientCiphertext(c, master_client_pks[0], true);
       }
       end = QDateTime::currentMSecsSinceEpoch();
 
