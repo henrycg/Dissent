@@ -1390,24 +1390,27 @@ namespace BlogDropPrivate {
           verify_proofs = true;
         }
 
-        if(verify_proofs) {
+        if(!_round->_state->verify_proofs && !verify_proofs) {
           const int siglen = _round->_state->slot_sig_keys[slot_idx]->GetSignatureLength();
           const QByteArray msg = plain.mid(siglen);
-          if(!_round->_state->slot_sig_keys[slot_idx]->Verify(msg, plain.left(siglen))) {
-            QSet<int> bad_clients = _round->_server_state->blogdrop_servers[slot_idx]->FindBadClients();
-
-            QVector<int> bad_cs;
-            foreach(int bc, bad_clients) {
-              bad_cs.append(bc);
-            }
-            _round->SetBadMembers(bad_cs);
-
-            if(bad_cs.count()) qWarning() << "Found bad clients:" << bad_cs;
-            _round->Abort("Found bad clients!");
-            emit Finished(QByteArray());
-            return;
-          }
+          verify_proofs = !_round->_state->slot_sig_keys[slot_idx]->Verify(msg, plain.left(siglen));
           plain = msg;
+        }
+
+
+        if(verify_proofs) {
+          QSet<int> bad_clients = _round->_server_state->blogdrop_servers[slot_idx]->FindBadClients();
+
+          QVector<int> bad_cs;
+          foreach(int bc, bad_clients) {
+            bad_cs.append(bc);
+          }
+          _round->SetBadMembers(bad_cs);
+
+          if(bad_cs.count()) qWarning() << "Found bad clients:" << bad_cs;
+          _round->Abort("Found bad clients!");
+          emit Finished(QByteArray());
+          return;
         }
 
         // 4 bytes in an int
