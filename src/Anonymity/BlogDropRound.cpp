@@ -1383,17 +1383,26 @@ namespace BlogDropPrivate {
       QByteArray plain;
 
       if(_round->SlotIsOpen(slot_idx)) {
+        bool verify_proofs = _round->_state->verify_proofs;
+
         if(!_round->_server_state->blogdrop_servers[slot_idx]->RevealPlaintext(plain)) {
           qWarning() << "Could not decode plaintext message. Maybe bad anon author?";
-          continue;
+          verify_proofs = true;
         }
 
-        if(!_round->_state->verify_proofs) {
+        if(verify_proofs) {
           const int siglen = _round->_state->slot_sig_keys[slot_idx]->GetSignatureLength();
           const QByteArray msg = plain.mid(siglen);
           if(!_round->_state->slot_sig_keys[slot_idx]->Verify(msg, plain.left(siglen))) {
             QSet<int> bad_clients = _round->_server_state->blogdrop_servers[slot_idx]->FindBadClients();
-            if(bad_clients.count()) qWarning() << "Found bad clients:" << bad_clients;
+
+            QVector<int> bad_cs;
+            foreach(int bc, bad_clients) {
+              bad_cs.append(bc);
+            }
+            _round->SetBadMembers(bad_cs);
+
+            if(bad_cs.count()) qWarning() << "Found bad clients:" << bad_cs;
             _round->Abort("Found bad clients!");
             emit Finished(QByteArray());
             return;
