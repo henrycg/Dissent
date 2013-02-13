@@ -1254,33 +1254,14 @@ namespace BlogDropPrivate {
     }
 
     if(_round->BadClient()) {
-      bool success = false;
       for(int idx = 0; idx < ctexts.size(); idx++) {
         if(ctexts[idx].size() == 0) {
           continue;
         }
-        QList<QByteArray> data;
-        QDataStream ostream(ctexts[idx]);
-        ostream >> data;
 
-        if(!data.size()) {
-          continue;
-        }
-
-//        Crypto::CryptoRandom rand;
-        for(int jdx = 0; jdx < data.size(); jdx++) {
-          int kdx = data[jdx].size() / 2;
-          data[jdx][kdx] = data[jdx][kdx] ^ 0xff;
-//          rand.GenerateBlock(data[jdx]);
-        }
-        QDataStream istream(&ctexts[idx], QIODevice::WriteOnly);
-        istream << data;
-        success = true;
-        break;
-      }
-
-      if(success) {
+        ctexts[idx]  = _round->_state->blogdrop_clients[(idx + 1) % ctexts.size()]->GenerateCoverCiphertext();
         qDebug() << "Attack success!";
+        break;
       }
     }
 
