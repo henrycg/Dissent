@@ -1,7 +1,8 @@
 #include <QtConcurrentRun>
 
-#include "Crypto/RsaPublicKey.hpp"
+#include "Crypto/CryptoRandom.hpp"
 #include "Crypto/Hash.hpp"
+#include "Crypto/RsaPublicKey.hpp"
 #include "Crypto/BlogDrop/BlogDropUtils.hpp"
 #include "Crypto/BlogDrop/ClientCiphertext.hpp"
 #include "Crypto/BlogDrop/ServerCiphertext.hpp"
@@ -30,7 +31,8 @@ namespace Anonymity {
   BlogDropRound::BlogDropRound(const QSharedPointer<Parameters> &params,
       const Group &group, const PrivateIdentity &ident,
       const Id &round_id, const QSharedPointer<Network> &network,
-      GetDataCallback &get_data, CreateRound create_shuffle) :
+      GetDataCallback &get_data, CreateRound create_shuffle,
+      bool verify_proofs) :
     BaseBulkRound(group, ident, round_id, network, get_data, create_shuffle),
     _params(params),
     _state_machine(this),
@@ -57,14 +59,13 @@ namespace Anonymity {
       InitClient();
     }
 
+    _state->verify_proofs = verify_proofs ||
+      _params->GetProofType() == Parameters::ProofType_ElGamal;
     _state->n_servers = GetGroup().GetSubgroup().Count();
     _state->n_clients = GetGroup().Count();
 
     // All slots start out closed
     _state->slots_open = QBitArray(GetGroup().Count(), false);
-
-    if(!VerifyAllProofs && _params->GetProofType() == Parameters::ProofType_ElGamal)
-      qFatal("When using ElGamal variant, you *must* verify all client proofs");
   }
 
   void BlogDropRound::InitServer()
@@ -982,7 +983,7 @@ namespace Anonymity {
     
     int header_length = len_length;
     // If we're not verifying proofs, plaintext must be signed
-    if(!VerifyAllProofs) {
+    if(!_state->verify_proofs) {
       header_length += sig_len;
     }
 
@@ -1041,7 +1042,7 @@ namespace Anonymity {
 
     QByteArray out;
     const QByteArray to_sign = lenbytes + this_plaintext;
-    if(VerifyAllProofs) {
+    if(_state->verify_proofs) {
       out = to_sign;
     } else {
       // Sign the length and plaintext message fields
@@ -1252,6 +1253,37 @@ namespace BlogDropPrivate {
       ctexts.append(c);
     }
 
+    if(_round->BadClient()) {
+      bool success = false;
+      for(int idx = 0; idx < ctexts.size(); idx++) {
+        if(ctexts[idx].size() == 0) {
+          continue;
+        }
+        QList<QByteArray> data;
+        QDataStream ostream(ctexts[idx]);
+        ostream >> data;
+
+        if(!data.size()) {
+          continue;
+        }
+
+//        Crypto::CryptoRandom rand;
+        for(int jdx = 0; jdx < data.size(); jdx++) {
+          int kdx = data[jdx].size() / 2;
+          data[jdx][kdx] = data[jdx][kdx] ^ 0xff;
+//          rand.GenerateBlock(data[jdx]);
+        }
+        QDataStream istream(&ctexts[idx], QIODevice::WriteOnly);
+        istream << data;
+        success = true;
+        break;
+      }
+
+      if(success) {
+        qDebug() << "Attack success!";
+      }
+    }
+
     QByteArray out;
     QDataStream stream(&out, QIODevice::WriteOnly);
     stream << ctexts;
@@ -1314,7 +1346,7 @@ namespace BlogDropPrivate {
 
         //qDebug() << "Creating server ciphertext for slot" << slot_idx;
         _round->_server_state->blogdrop_servers[slot_idx]->AddClientCiphertexts(by_slot[slot_idx], 
-            client_pks, _round->VerifyAllProofs);
+            client_pks, _round->_state->verify_proofs);
         c = _round->_server_state->blogdrop_servers[slot_idx]->CloseBin();
       } 
 
@@ -1375,7 +1407,7 @@ namespace BlogDropPrivate {
           continue;
         }
 
-        if(!_round->VerifyAllProofs) {
+        if(!_round->_state->verify_proofs) {
           const int siglen = _round->_state->slot_sig_keys[slot_idx]->GetSignatureLength();
           const QByteArray msg = plain.mid(siglen);
           if(!_round->_state->slot_sig_keys[slot_idx]->Verify(msg, plain.left(siglen))) {
